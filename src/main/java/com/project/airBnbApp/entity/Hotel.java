@@ -30,6 +30,7 @@ public class Hotel {
     private String[] amenities;
 
     @CreationTimestamp
+    @Column(updatable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
@@ -38,5 +39,5 @@ public class Hotel {
     @Embedded
     private HotelContactInfo contactInfo;
 
-    private Boolean isActive;
+    private Boolean active;
 }
