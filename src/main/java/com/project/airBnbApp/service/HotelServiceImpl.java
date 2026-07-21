@@ -29,11 +29,46 @@ public class HotelServiceImpl implements HotelService{
 
     @Override
     public HotelDTO getHotelById(Long id) {
-        log.info("Getting the hotel with ID : {}", id);
+        log.info("Finding the hotel with ID : {}", id);
         Hotel hotel =  hotelRepository
                 .findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Hotel not found with ID : "+id));
-        log.info("Got the hotel with ID : {}", id);
+        log.info("Fetched the hotel with ID : {}", id);
         return modelMapper.map(hotel, HotelDTO.class);
+    }
+
+    @Override
+    public HotelDTO updateHotelById(Long id, HotelDTO hotelDTO) {
+        log.info("Finding the hotel with ID : {}", id);
+        Hotel hotel =  hotelRepository
+                .findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Hotel not found with ID : "+id));
+        log.info("Fetched the hotel with ID : {}", id);
+        modelMapper.map(hotelDTO, hotel);
+        hotel.setId(id);
+
+        // Arrays aren't affected by ModelMapper's collection-merge setting — handle manually
+        if (hotelDTO.getAmenities() != null) {
+            hotel.setAmenities(hotelDTO.getAmenities());
+        }
+        if (hotelDTO.getPhotos() != null) {
+            hotel.setPhotos(hotelDTO.getPhotos());
+        }
+        hotel = hotelRepository.save(hotel);
+        log.info("Updated the hotel with ID : {}", id);
+        return  modelMapper.map(hotel,HotelDTO.class);
+    }
+
+    @Override
+    public void deleteHotelById(Long id) {
+        log.info("Checking the hotel with ID is present or not: {}", id);
+        boolean exists =  hotelRepository.existsById(id);
+        if(!exists) throw new ResourceNotFoundException("Hotel not found with ID : "+id);
+        log.info("Hotel with ID : {} is present", id);
+
+        hotelRepository.deleteById(id);
+        log.info("Deleted the hotel with ID : {}", id);
+        // do not hard delete it, soft delete it by
+        // TODO : delete the inventories for this hotel
     }
 }

@@ -40,4 +40,7 @@ public class Hotel {
     private HotelContactInfo contactInfo;
 
     private Boolean active;
+
+    @ManyToOne
+    private User owner;
 }

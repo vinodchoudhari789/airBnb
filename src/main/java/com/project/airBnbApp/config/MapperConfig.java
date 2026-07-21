@@ -9,6 +9,8 @@ public class MapperConfig {
 
     @Bean
     public ModelMapper getModelMapper(){
-        return new ModelMapper();
+        ModelMapper modelMapper = new ModelMapper();
+        modelMapper.getConfiguration().setCollectionsMergeEnabled(false);
+        return modelMapper;
     }
 }
