@@ -1,5 +1,10 @@
 package com.project.airBnbApp.service;
 
-public interface HotelService {
+import com.project.airBnbApp.dto.HotelDTO;
+import com.project.airBnbApp.entity.Hotel;
 
+public interface HotelService {
+    HotelDTO createNewHotel(HotelDTO hotelDTO);
+
+    HotelDTO getHotelById(Long id);
 }
