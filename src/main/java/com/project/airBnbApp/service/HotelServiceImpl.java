@@ -2,6 +2,7 @@ package com.project.airBnbApp.service;
 
 import com.project.airBnbApp.dto.HotelDTO;
 import com.project.airBnbApp.entity.Hotel;
+import com.project.airBnbApp.exception.ResourceNotFoundException;
 import com.project.airBnbApp.respository.HotelRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +32,7 @@ public class HotelServiceImpl implements HotelService{
         log.info("Getting the hotel with ID : {}", id);
         Hotel hotel =  hotelRepository
                 .findById(id)
-                .orElseThrow(() -> new RuntimeException("Hotel not found with ID : "+id));
+                .orElseThrow(() -> new ResourceNotFoundException("Hotel not found with ID : "+id));
         log.info("Got the hotel with ID : {}", id);
         return modelMapper.map(hotel, HotelDTO.class);
     }
