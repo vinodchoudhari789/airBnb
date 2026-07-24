@@ -31,12 +31,8 @@ public class Booking {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "payment_id")
-    private Payment payment;
-
     @Column(nullable = false)
-    private Integer roomCount;
+    private Integer roomsCount;
 
     @Column(nullable = false)
     private LocalDateTime checkInDate;

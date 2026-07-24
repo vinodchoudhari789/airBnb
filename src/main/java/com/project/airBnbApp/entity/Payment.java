@@ -25,4 +25,8 @@ public class Payment {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private PaymentStatus paymentStatus;
+
+
+    @OneToOne(fetch = FetchType.LAZY)
+    private Booking booking;
 }
