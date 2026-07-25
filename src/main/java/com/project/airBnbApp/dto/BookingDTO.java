@@ -1,19 +1,22 @@
 package com.project.airBnbApp.dto;
 
 import com.project.airBnbApp.entity.enums.BookingStatus;
+import lombok.Data;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Set;
 
+@Data
 public class BookingDTO {
 
     private Long id;
 
     private Integer roomsCount;
 
-    private LocalDateTime checkInDate;
+    private LocalDate checkInDate;
 
-    private LocalDateTime checkOutDate;
+    private LocalDate checkOutDate;
 
     private BookingStatus bookingStatus;
 

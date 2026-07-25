@@ -1,6 +1,9 @@
 package com.project.airBnbApp.dto;
-import java.time.LocalDateTime;
+import lombok.Data;
 
+import java.time.LocalDate;
+
+@Data
 public class BookingRequestDTO {
 
     private Long hotelId;
@@ -9,8 +12,8 @@ public class BookingRequestDTO {
 
     private Integer roomsCount;
 
-    private LocalDateTime checkInDate;
+    private LocalDate checkInDate;
 
-    private LocalDateTime checkOutDate;
+    private LocalDate checkOutDate;
 
 }
