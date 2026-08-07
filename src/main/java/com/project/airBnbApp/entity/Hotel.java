@@ -43,7 +43,7 @@ public class Hotel {
 
     private Boolean active;
 
-    @ManyToOne
+    @ManyToOne(optional = false)
     private User owner;
 
     @OneToMany(mappedBy = "hotel")
