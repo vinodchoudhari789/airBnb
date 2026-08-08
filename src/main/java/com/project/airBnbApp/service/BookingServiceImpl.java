@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -32,6 +33,10 @@ public class BookingServiceImpl implements BookingService{
     private final HotelRepository hotelRepository;
     private final RoomRepository roomRepository;
     private final ModelMapper modelMapper;
+    private final CheckoutService checkoutService;
+
+    @Value("${frontend.url}")
+    private String frontendUrl;
 
     @Override
     @Transactional
@@ -102,6 +107,8 @@ public class BookingServiceImpl implements BookingService{
         log.info("Fetched booking with Id : {}",bookingId);
 
         User user = getCurrentUser();
+
+        log.info("Checking if booking is of current user or not");
         if(!user.equals(booking.getUser())){
             throw new UnauthorizedException("Booking does not belong to this user with id : "+user.getId());
         }
@@ -131,6 +138,38 @@ public class BookingServiceImpl implements BookingService{
 
         log.info("Guests Added Successfully!!!");
         return modelMapper.map(booking, BookingDTO.class);
+    }
+
+    @Override
+    public String initiatePayment(Long bookingId) {
+        log.info("Checking if booking exists or not");
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found with id : "+ bookingId));
+
+        User user = getCurrentUser();
+
+        log.info("Checking if booking is of current user or not");
+        if(!user.equals(booking.getUser())){
+            throw new UnauthorizedException("Booking does not belong to this user with id : "+user.getId());
+        }
+
+
+        log.info("Checking if booking is expired or not");
+        if(hasBookingExpired(booking)){
+            throw new IllegalStateException("Booking has already expired");
+        }
+
+         String sessionUrl = checkoutService.getCheckoutSession(booking,
+                frontendUrl+"/payments/success",
+                frontendUrl+"/payments/failure" );
+
+        log.info("Updating Booking Status to PAYMENT_PENDING");
+        booking.setBookingStatus(BookingStatus.PAYMENT_PENDING);
+
+        log.info("Saving Booking");
+        bookingRepository.save(booking);
+
+        return sessionUrl;
     }
 
     private boolean hasBookingExpired(Booking booking) {
