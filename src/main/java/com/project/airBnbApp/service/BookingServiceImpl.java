@@ -8,6 +8,7 @@ import com.project.airBnbApp.entity.enums.BookingStatus;
 import com.project.airBnbApp.exception.ResourceNotFoundException;
 import com.project.airBnbApp.exception.UnauthorizedException;
 import com.project.airBnbApp.respository.*;
+import com.project.airBnbApp.strategy.PricingService;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Event;
 import com.stripe.model.Refund;
@@ -39,6 +40,7 @@ public class BookingServiceImpl implements BookingService{
     private final RoomRepository roomRepository;
     private final ModelMapper modelMapper;
     private final CheckoutService checkoutService;
+    private final PricingService pricingService;
 
     @Value("${frontend.url}")
     private String frontendUrl;
@@ -75,14 +77,11 @@ public class BookingServiceImpl implements BookingService{
         }
 
         // Reserve the room/update the booked count of inventories
-        for(Inventory inventory: inventoryList){
-            inventory.setReservedCount(inventory.getReservedCount() + bookingRequest.getRoomsCount());
-        }
+        inventoryRepository.initBooking(bookingRequest.getRoomId(),
+                bookingRequest.getCheckInDate(),bookingRequest.getCheckOutDate(), bookingRequest.getRoomsCount());
 
-        log.info("Updated inventories list");
-        inventoryRepository.saveAll(inventoryList);
-
-        // TODO : Calculate Dynamic Amount
+        BigDecimal priceForOneRoom = pricingService.calculateTotalPriceForOneRoom(inventoryList);
+        BigDecimal totalPrice = priceForOneRoom.multiply(BigDecimal.valueOf(bookingRequest.getRoomsCount()));
 
         log.info("Creating new booking");
         Booking newBooking = Booking.builder()
@@ -92,7 +91,7 @@ public class BookingServiceImpl implements BookingService{
                 .checkOutDate(bookingRequest.getCheckOutDate())
                 .user(getCurrentUser())
                 .roomsCount(bookingRequest.getRoomsCount())
-                .amount(BigDecimal.valueOf(10000))
+                .amount(totalPrice)
                 .bookingStatus(BookingStatus.RESERVED)
                 .build();
 

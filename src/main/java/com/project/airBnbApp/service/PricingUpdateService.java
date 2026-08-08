@@ -41,6 +41,8 @@ public class PricingUpdateService {
 //    @Scheduled(cron = "0 * * * * *")  // for every minute
     @Scheduled(cron = "0 0 * * * *")
     public void updatePrice(){
+        log.info("Running scheduler for updating prices of hotel");
+
         int page = 0;
         int batchSize = 100;
 
