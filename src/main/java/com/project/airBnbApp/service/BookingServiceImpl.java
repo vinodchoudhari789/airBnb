@@ -8,6 +8,8 @@ import com.project.airBnbApp.entity.enums.BookingStatus;
 import com.project.airBnbApp.exception.ResourceNotFoundException;
 import com.project.airBnbApp.exception.UnauthorizedException;
 import com.project.airBnbApp.respository.*;
+import com.stripe.model.Event;
+import com.stripe.model.checkout.Session;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -87,7 +89,7 @@ public class BookingServiceImpl implements BookingService{
                 .checkOutDate(bookingRequest.getCheckOutDate())
                 .user(getCurrentUser())
                 .roomsCount(bookingRequest.getRoomsCount())
-                .amount(BigDecimal.TEN)
+                .amount(BigDecimal.valueOf(10000))
                 .bookingStatus(BookingStatus.RESERVED)
                 .build();
 
@@ -98,6 +100,7 @@ public class BookingServiceImpl implements BookingService{
     }
 
     @Override
+    @Transactional
     public BookingDTO addGuests(Long bookingId, List<GuestDTO> guestsDTOList) {
         log.info("Adding Guests for Booking : {}", bookingId );
 
@@ -141,6 +144,7 @@ public class BookingServiceImpl implements BookingService{
     }
 
     @Override
+    @Transactional
     public String initiatePayment(Long bookingId) {
         log.info("Checking if booking exists or not");
         Booking booking = bookingRepository.findById(bookingId)
@@ -170,6 +174,35 @@ public class BookingServiceImpl implements BookingService{
         bookingRepository.save(booking);
 
         return sessionUrl;
+    }
+
+    @Override
+    @Transactional
+    public void capturePayment(Event event) {
+        log.info("capturePayment start");
+        if("checkout.session.completed".equals(event.getType())){
+
+            Session session = (Session) event.getDataObjectDeserializer().getObject().orElse(null);
+
+            if(session == null) return;
+            String sessionId = session.getId();
+            Booking booking = bookingRepository.findByPaymentSessionId(sessionId)
+                    .orElseThrow(()-> new ResourceNotFoundException("Booking not found for Session Id : "+sessionId));
+
+            booking.setBookingStatus(BookingStatus.CONFIRMED);
+
+            inventoryRepository.findAndLockReservedInventory(booking.getRoom().getId(), booking.getCheckInDate(),
+                    booking.getCheckOutDate(), booking.getRoomsCount());
+            log.info("Locked reserved inventory");
+
+            inventoryRepository.confirmBooking(booking.getRoom().getId(), booking.getCheckInDate(),
+                    booking.getCheckOutDate(), booking.getRoomsCount());
+
+            log.info("Successfully confirmed the booking for Id : {}", booking.getId());
+
+        }else{
+            log.warn("Unhandled event type : {}", event.getType());
+        }
     }
 
     private boolean hasBookingExpired(Booking booking) {
