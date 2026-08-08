@@ -8,8 +8,11 @@ import com.project.airBnbApp.entity.enums.BookingStatus;
 import com.project.airBnbApp.exception.ResourceNotFoundException;
 import com.project.airBnbApp.exception.UnauthorizedException;
 import com.project.airBnbApp.respository.*;
+import com.stripe.exception.StripeException;
 import com.stripe.model.Event;
+import com.stripe.model.Refund;
 import com.stripe.model.checkout.Session;
+import com.stripe.param.RefundCreateParams;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -202,6 +205,56 @@ public class BookingServiceImpl implements BookingService{
 
         }else{
             log.warn("Unhandled event type : {}", event.getType());
+        }
+    }
+
+    @Override
+    @Transactional
+    public void cancelBooking(Long bookingId) {
+        log.info("Starting the process of cancellation");
+
+        log.info("Checking if booking exists or not");
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found with id : "+ bookingId));
+
+        User user = getCurrentUser();
+        log.info("Checking if booking is of current user or not");
+        if(!user.equals(booking.getUser())){
+            throw new UnauthorizedException("Booking does not belong to this user with id : "+user.getId());
+        }
+
+        if(booking.getBookingStatus() != BookingStatus.CONFIRMED){
+            throw new IllegalStateException("Only confirmed booking can be cancelled.");
+        }
+
+        log.info("Updating Booking Status to CANCELLED");
+        booking.setBookingStatus(BookingStatus.CANCELLED);
+
+        bookingRepository.save(booking);
+        log.info("Saved booking with updated status");
+
+        inventoryRepository.findAndLockReservedInventory(booking.getRoom().getId(), booking.getCheckInDate(),
+                booking.getCheckOutDate(), booking.getRoomsCount());
+        log.info("Locked reserved inventory");
+
+        inventoryRepository.cancelBooking(booking.getRoom().getId(), booking.getCheckInDate(),
+                booking.getCheckOutDate(), booking.getRoomsCount());
+        log.info("Updated reserved count from inventory");
+
+        log.info("Successfully cancelled the booking for Id : {}", booking.getId());
+
+
+        //handle the refund
+        try{
+            log.info("Creating refund session");
+            Session session = Session.retrieve(booking.getPaymentSessionId());
+            RefundCreateParams refundParams = RefundCreateParams.builder()
+                    .setPaymentIntent(session.getPaymentIntent())
+                    .build();
+
+            Refund.create(refundParams);
+        } catch (StripeException e) {
+            throw new RuntimeException(e);
         }
     }
 
