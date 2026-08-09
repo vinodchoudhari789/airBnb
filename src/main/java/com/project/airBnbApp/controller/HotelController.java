@@ -2,6 +2,7 @@ package com.project.airBnbApp.controller;
 
 import com.project.airBnbApp.dto.BookingDTO;
 import com.project.airBnbApp.dto.HotelDTO;
+import com.project.airBnbApp.dto.HotelReportDTO;
 import com.project.airBnbApp.service.BookingService;
 import com.project.airBnbApp.service.HotelService;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -62,6 +64,17 @@ public class HotelController {
     public ResponseEntity<List<BookingDTO>> getAllBookingsInHotelById(@PathVariable Long hotelId){
         List<BookingDTO> bookings = bookingService.getAllBookingsInHotelById(hotelId);
         return ResponseEntity.ok(bookings);
+    }
+
+    @GetMapping("/{hotelId}/reports")
+    public ResponseEntity<HotelReportDTO> getHotelReport(@PathVariable Long hotelId,
+                                                         @RequestParam(required = false) LocalDate startDate,
+                                                         @RequestParam(required = false) LocalDate endDate){
+        if(startDate == null) startDate = LocalDate.now().minusMonths(1);
+        if(endDate == null) endDate = LocalDate.now();
+
+        HotelReportDTO hotelReport= bookingService.getHotelReport(hotelId, startDate, endDate);
+        return ResponseEntity.ok(hotelReport);
     }
 
 
