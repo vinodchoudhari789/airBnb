@@ -17,10 +17,8 @@ import com.stripe.param.RefundCreateParams;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -257,6 +255,28 @@ public class BookingServiceImpl implements BookingService{
         } catch (StripeException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public List<BookingDTO> getAllBookingsInHotelById(Long hotelId) {
+        log.info("Fetching hotel with Id : {}",hotelId);
+        Hotel hotel = hotelRepository.findById(hotelId)
+                .orElseThrow(()-> new ResourceNotFoundException("Hotel not found with ID : "+hotelId));
+        log.info("Fetched hotel with Id : {}",hotelId);
+
+        User user = getCurrentUser();
+        log.info("Checking if hotel is of current user or not");
+        if(!user.equals(hotel.getOwner())){
+            throw new UnauthorizedException("User does not own this hotel with id : "+hotelId);
+        }
+
+
+        List<Booking> bookings = bookingRepository.findByHotel(hotelId);
+        log.info("Fetched all bookings of hotel with Id : {}",hotelId);
+
+        return bookings.stream()
+                .map((element) -> modelMapper.map(element, BookingDTO.class))
+                .toList();
     }
 
     private boolean hasBookingExpired(Booking booking) {

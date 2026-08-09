@@ -1,6 +1,8 @@
 package com.project.airBnbApp.controller;
 
+import com.project.airBnbApp.dto.BookingDTO;
 import com.project.airBnbApp.dto.HotelDTO;
+import com.project.airBnbApp.service.BookingService;
 import com.project.airBnbApp.service.HotelService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +19,7 @@ import java.util.List;
 public class HotelController {
 
     private final HotelService hotelService;
+    private final BookingService bookingService;
 
     @PostMapping
     public ResponseEntity<HotelDTO> createNewHotel(@RequestBody HotelDTO hotelDTO){
@@ -54,5 +57,12 @@ public class HotelController {
         List<HotelDTO> hotelList = hotelService.getAllHotels();
         return ResponseEntity.ok(hotelList);
     }
+
+    @GetMapping("/{hotelId}/bookings")
+    public ResponseEntity<List<BookingDTO>> getAllBookingsInHotelById(@PathVariable Long hotelId){
+        List<BookingDTO> bookings = bookingService.getAllBookingsInHotelById(hotelId);
+        return ResponseEntity.ok(bookings);
+    }
+
 
 }
