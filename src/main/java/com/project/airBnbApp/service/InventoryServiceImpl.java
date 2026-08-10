@@ -3,6 +3,7 @@ package com.project.airBnbApp.service;
 import com.project.airBnbApp.dto.HotelPriceDTO;
 import com.project.airBnbApp.dto.HotelSearchRequestDTO;
 import com.project.airBnbApp.dto.InventoryDTO;
+import com.project.airBnbApp.dto.UpdateInventoryRequestDTO;
 import com.project.airBnbApp.entity.Inventory;
 import com.project.airBnbApp.entity.Room;
 import com.project.airBnbApp.entity.User;
@@ -10,6 +11,7 @@ import com.project.airBnbApp.exception.ResourceNotFoundException;
 import com.project.airBnbApp.respository.HotelMinPriceRepository;
 import com.project.airBnbApp.respository.InventoryRepository;
 import com.project.airBnbApp.respository.RoomRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -105,6 +107,7 @@ public class InventoryServiceImpl implements InventoryService{
 //    }
 
     @Override
+    @Transactional
     public List<InventoryDTO> getAllInventoryByRoom(Long roomId) {
         log.info("Fetching all inventory by room for room with Id : {}",roomId);
 
@@ -118,5 +121,24 @@ public class InventoryServiceImpl implements InventoryService{
                 .stream()
                 .map((element) -> modelMapper.map(element, InventoryDTO.class))
                 .toList();
+    }
+
+    @Override
+    @Transactional
+    public void updateInventory(Long roomId, UpdateInventoryRequestDTO updateInventoryRequestDTO) {
+        log.info("Updating all inventory by room for room with Id : {} between date range : {} - {}",roomId,
+                updateInventoryRequestDTO.getStartDate(),updateInventoryRequestDTO.getEndDate());
+
+        inventoryRepository.getInventoryAndLockBeforeUpdate(roomId,
+                updateInventoryRequestDTO.getStartDate(), updateInventoryRequestDTO.getEndDate());
+        log.info("Locked Inventory Before Update");
+
+        inventoryRepository.updateInventory(roomId,
+                updateInventoryRequestDTO.getStartDate(), updateInventoryRequestDTO.getEndDate(),
+                updateInventoryRequestDTO.getClosed(), updateInventoryRequestDTO.getSurgeFactor() );
+
+        log.info("Updated all inventory by room for room with Id : {} between date range : {} - {}",roomId,
+                updateInventoryRequestDTO.getStartDate(),updateInventoryRequestDTO.getEndDate());
+
     }
 }
