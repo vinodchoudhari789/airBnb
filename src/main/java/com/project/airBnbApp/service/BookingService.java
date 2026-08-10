@@ -5,6 +5,7 @@ import com.project.airBnbApp.dto.BookingRequestDTO;
 import com.project.airBnbApp.dto.GuestDTO;
 import com.project.airBnbApp.dto.HotelReportDTO;
 import com.stripe.model.Event;
+import org.jspecify.annotations.Nullable;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -24,4 +25,6 @@ public interface BookingService {
     List<BookingDTO> getAllBookingsInHotelById(Long hotelId);
 
     HotelReportDTO getHotelReport(Long hotelId, LocalDate startDate, LocalDate endDate);
+
+    List<BookingDTO> getMyBookings();
 }

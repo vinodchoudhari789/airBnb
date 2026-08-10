@@ -29,6 +29,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.project.airBnbApp.util.AppUtils.getCurrentUser;
 
@@ -317,6 +318,19 @@ public class BookingServiceImpl implements BookingService{
                 totalRevenueOfConfirmedBookings.divide(BigDecimal.valueOf(totalConfirmedBookings), RoundingMode.HALF_UP);
 
         return new HotelReportDTO(totalConfirmedBookings, totalRevenueOfConfirmedBookings, avgRevenueOfConfirmedBookings);
+    }
+
+    @Override
+    public List<BookingDTO> getMyBookings() {
+        User user = getCurrentUser();
+        log.info("Fetching all bookings of user : {}", user.getName());
+
+        List<Booking> bookings = bookingRepository.findByUser(user);
+        log.info("Fetched all bookings of user : {}", user.getName());
+
+        return bookings.stream()
+                .map((element) -> modelMapper.map(element, BookingDTO.class))
+                .collect(Collectors.toList());
     }
 
     private boolean hasBookingExpired(Booking booking) {
