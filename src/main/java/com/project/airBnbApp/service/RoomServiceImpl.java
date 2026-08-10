@@ -11,6 +11,7 @@ import com.project.airBnbApp.respository.RoomRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import org.modelmapper.ModelMapper;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -105,6 +106,25 @@ public class RoomServiceImpl implements RoomService{
         log.info("Deleting room with ID : {}",roomId);
         roomRepository.deleteById(roomId);
         log.info("Deleted room with ID : {}",roomId);
+    }
+
+    @Override
+    @Transactional
+    public RoomDTO updateRoomById(Long hotelId, Long roomId, RoomDTO roomDTO) {
+
+        log.info("Checking room with ID : {}",roomId);
+        Room room = roomRepository.findById(roomId).orElseThrow(()->new ResourceNotFoundException("Room not found with ID "+ roomId));
+        log.info("Room with ID : {} is present in the system",roomId);
+
+        checkHotelBelongsToUser(room.getHotel());
+
+        modelMapper.map(roomDTO, room);
+        room.setId(roomId);
+
+        // TODO: if price or inventory is updated then update the inventory for this room.
+
+        log.info("Updated room with ID : {}",roomId);
+        return modelMapper.map(room, RoomDTO.class);
     }
 
     private void checkHotelBelongsToUser(Hotel hotel){

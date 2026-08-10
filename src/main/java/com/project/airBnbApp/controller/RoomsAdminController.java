@@ -34,10 +34,17 @@ public class RoomsAdminController {
         return ResponseEntity.ok(roomService.getRoomById(roomId));
     }
 
+    @PatchMapping("/{roomId}")
+    public ResponseEntity<RoomDTO> updateRoomById(@PathVariable Long hotelId, @PathVariable Long roomId,
+                                                  @RequestBody RoomDTO roomDTO){
+        return ResponseEntity.ok(roomService.updateRoomById(hotelId, roomId, roomDTO));
+    }
+
     @DeleteMapping("/{roomId}")
     public ResponseEntity<RoomDTO> deleteRoomById(@PathVariable Long hotelId, @PathVariable Long roomId){
         roomService.deleteRoomById(roomId);
         return ResponseEntity.noContent().build();
     }
+
 }
 
