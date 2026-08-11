@@ -20,7 +20,7 @@ public class UserController {
     private final UserService userService;
     private final BookingService bookingService;
 
-    @PutMapping("/profile")
+    @PatchMapping("/profile")
     public ResponseEntity<Void> updateProfile(@RequestBody ProfileUpdateRequestDTO profileUpdateRequestDTO){
         userService.updateProfile(profileUpdateRequestDTO);
         return ResponseEntity.noContent().build();
