@@ -2,6 +2,7 @@ package com.project.airBnbApp.controller;
 
 import com.project.airBnbApp.dto.BookingDTO;
 import com.project.airBnbApp.dto.ProfileUpdateRequestDTO;
+import com.project.airBnbApp.dto.UserDTO;
 import com.project.airBnbApp.service.BookingService;
 import com.project.airBnbApp.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -29,5 +30,10 @@ public class UserController {
     @GetMapping("/myBookings")
     public ResponseEntity<List<BookingDTO>> getMyBookings(){
         return ResponseEntity.ok(bookingService.getMyBookings());
+    }
+
+    @GetMapping("/profile")
+    public ResponseEntity<UserDTO> getMyProfile(){
+        return ResponseEntity.ok(userService.getMyProfile());
     }
 }
