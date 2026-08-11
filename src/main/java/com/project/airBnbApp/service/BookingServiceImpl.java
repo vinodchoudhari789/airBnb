@@ -276,7 +276,7 @@ public class BookingServiceImpl implements BookingService{
         }
 
 
-        List<Booking> bookings = bookingRepository.findByHotel(hotelId);
+        List<Booking> bookings = bookingRepository.findByHotel(hotel);
         log.info("Fetched all bookings of hotel with Id : {}",hotelId);
 
         return bookings.stream()
