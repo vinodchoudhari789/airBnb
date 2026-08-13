@@ -4,6 +4,7 @@ import com.project.airBnbApp.dto.HotelDTO;
 import com.project.airBnbApp.dto.HotelInfoDTO;
 import com.project.airBnbApp.dto.HotelPriceDTO;
 import com.project.airBnbApp.dto.HotelSearchRequestDTO;
+import com.project.airBnbApp.dto.RoomPriceDTO;
 import com.project.airBnbApp.service.HotelService;
 import com.project.airBnbApp.service.InventoryService;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +12,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/hotels")
@@ -32,6 +35,17 @@ public class HotelBrowseController {
     public ResponseEntity<HotelInfoDTO> getHotelInfo(@PathVariable Long hotelId){
         HotelInfoDTO hotelInfo = hotelService.getHotelInfoById(hotelId);
         return ResponseEntity.ok(hotelInfo);
+    }
+
+    @GetMapping("/rooms/{roomId}/price")
+    public ResponseEntity<RoomPriceDTO> getRoomPrice(
+            @PathVariable Long roomId,
+            @RequestParam LocalDate startDate,
+            @RequestParam LocalDate endDate,
+            @RequestParam(defaultValue = "1") Integer roomsCount){
+
+        RoomPriceDTO price = inventoryService.getRoomPriceForDateRange(roomId, startDate, endDate, roomsCount);
+        return ResponseEntity.ok(price);
     }
 
 }

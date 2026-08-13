@@ -55,6 +55,24 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
             @Param("roomsCount") Integer roomsCount
     );
 
+    // Same availability rule as findAndLockAvailableInventory, but without
+    // the pessimistic lock - safe for read-only price previews where we
+    // don't intend to reserve anything.
+    @Query("""
+            SELECT i
+            FROM Inventory i
+            WHERE i.room.id = :roomId
+                AND i.date BETWEEN :startDate AND :endDate
+                AND i.closed = false
+                AND (i.totalCount - i.bookedCount - i.reservedCount) >= :roomsCount
+            """)
+    List<Inventory> findAvailableInventoryNoLock(
+            @Param("roomId") Long roomId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("roomsCount") Integer roomsCount
+    );
+
     List<Inventory> findByHotelAndDateBetween(Hotel hotel,LocalDate startDate, LocalDate endDate);
 
     @Query("""

@@ -3,6 +3,7 @@ package com.project.airBnbApp.service;
 import com.project.airBnbApp.dto.HotelPriceDTO;
 import com.project.airBnbApp.dto.HotelSearchRequestDTO;
 import com.project.airBnbApp.dto.InventoryDTO;
+import com.project.airBnbApp.dto.RoomPriceDTO;
 import com.project.airBnbApp.dto.UpdateInventoryRequestDTO;
 import com.project.airBnbApp.entity.Inventory;
 import com.project.airBnbApp.entity.Room;
@@ -11,6 +12,7 @@ import com.project.airBnbApp.exception.ResourceNotFoundException;
 import com.project.airBnbApp.respository.HotelMinPriceRepository;
 import com.project.airBnbApp.respository.InventoryRepository;
 import com.project.airBnbApp.respository.RoomRepository;
+import com.project.airBnbApp.strategy.PricingService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +38,7 @@ public class InventoryServiceImpl implements InventoryService{
     private final InventoryRepository inventoryRepository;
     private final ModelMapper modelMapper;
     private final HotelMinPriceRepository hotelMinPriceRepository;
+    private final PricingService pricingService;
 
     @Override
     public void initializeRoomForAYear(Room room) {
@@ -140,5 +143,34 @@ public class InventoryServiceImpl implements InventoryService{
         log.info("Updated all inventory by room for room with Id : {} between date range : {} - {}",roomId,
                 updateInventoryRequestDTO.getStartDate(),updateInventoryRequestDTO.getEndDate());
 
+    }
+
+    @Override
+    @Transactional
+    public RoomPriceDTO getRoomPriceForDateRange(Long roomId, LocalDate startDate, LocalDate endDate, Integer roomsCount) {
+        log.info("Fetching price preview for room Id : {}, between date {} - {}, roomsCount : {}",
+                roomId, startDate, endDate, roomsCount);
+
+        // A stay from startDate to endDate covers the nights
+        // [startDate, endDate - 1 day] - the checkout date itself is not a
+        // night stayed, so it's excluded here to match
+        // BookingServiceImpl.initializeBooking exactly (13 Aug -> 14 Aug is
+        // 1 night, not 2).
+        long nights = ChronoUnit.DAYS.between(startDate, endDate);
+
+        if (nights < 1) {
+            return new RoomPriceDTO(roomId, 0, roomsCount, BigDecimal.ZERO, false);
+        }
+
+        LocalDate lastNightDate = endDate.minusDays(1);
+        List<Inventory> inventoryList = inventoryRepository.findAvailableInventoryNoLock(
+                roomId, startDate, lastNightDate, roomsCount);
+
+        boolean available = inventoryList.size() == nights;
+
+        BigDecimal priceForOneRoom = pricingService.calculateTotalPriceForOneRoom(inventoryList);
+        BigDecimal totalPrice = priceForOneRoom.multiply(BigDecimal.valueOf(roomsCount));
+
+        return new RoomPriceDTO(roomId, (int) nights, roomsCount, totalPrice, available);
     }
 }
