@@ -69,21 +69,31 @@ public class BookingServiceImpl implements BookingService{
 
         log.info("Fetching List of Inventory with room Id : {} , between date {} - {}",
                 bookingRequest.getRoomId(), bookingRequest.getCheckInDate(),bookingRequest.getCheckOutDate());
+
+        // A stay from checkInDate to checkOutDate covers the nights
+        // [checkInDate, checkOutDate - 1 day] - the checkout date itself is
+        // not a night stayed, so it must not be included in the inventory
+        // range or the nights count (13 Aug -> 14 Aug is 1 night, not 2).
+        LocalDate lastNightDate = bookingRequest.getCheckOutDate().minusDays(1);
+        long daysCount = ChronoUnit.DAYS.between(bookingRequest.getCheckInDate(), bookingRequest.getCheckOutDate());
+
+        if (daysCount < 1) {
+            throw new IllegalStateException("Check-out date must be after check-in date");
+        }
+
         List<Inventory> inventoryList = inventoryRepository.findAndLockAvailableInventory(bookingRequest.getRoomId(),
-                bookingRequest.getCheckInDate(),bookingRequest.getCheckOutDate(), bookingRequest.getRoomsCount());
+                bookingRequest.getCheckInDate(), lastNightDate, bookingRequest.getRoomsCount());
         log.info("Fetched List of Inventory with room Id : {}, between date {} - {}",
                 bookingRequest.getRoomId(), bookingRequest.getCheckInDate(),bookingRequest.getCheckOutDate());
 
         // Checking if the fetch inventory count match the required book count
-        long daysCount = ChronoUnit.DAYS.between(bookingRequest.getCheckInDate(),bookingRequest.getCheckOutDate()) + 1;
-
         if(inventoryList.size() != daysCount){
             throw new IllegalStateException("Room is not available anymore");
         }
 
         // Reserve the room/update the booked count of inventories
         inventoryRepository.initBooking(bookingRequest.getRoomId(),
-                bookingRequest.getCheckInDate(),bookingRequest.getCheckOutDate(), bookingRequest.getRoomsCount());
+                bookingRequest.getCheckInDate(), lastNightDate, bookingRequest.getRoomsCount());
 
         BigDecimal priceForOneRoom = pricingService.calculateTotalPriceForOneRoom(inventoryList);
         BigDecimal totalPrice = priceForOneRoom.multiply(BigDecimal.valueOf(bookingRequest.getRoomsCount()));
@@ -198,12 +208,14 @@ public class BookingServiceImpl implements BookingService{
 
             booking.setBookingStatus(BookingStatus.CONFIRMED);
 
+            LocalDate lastNightDate = booking.getCheckOutDate().minusDays(1);
+
             inventoryRepository.findAndLockReservedInventory(booking.getRoom().getId(), booking.getCheckInDate(),
-                    booking.getCheckOutDate(), booking.getRoomsCount());
+                    lastNightDate, booking.getRoomsCount());
             log.info("Locked reserved inventory");
 
             inventoryRepository.confirmBooking(booking.getRoom().getId(), booking.getCheckInDate(),
-                    booking.getCheckOutDate(), booking.getRoomsCount());
+                    lastNightDate, booking.getRoomsCount());
 
             log.info("Successfully confirmed the booking for Id : {}", booking.getId());
 
@@ -242,7 +254,7 @@ public class BookingServiceImpl implements BookingService{
         log.info("Locked reserved inventory");
 
         inventoryRepository.cancelBooking(booking.getRoom().getId(), booking.getCheckInDate(),
-                booking.getCheckOutDate(), booking.getRoomsCount());
+                booking.getCheckOutDate().minusDays(1), booking.getRoomsCount());
         log.info("Updated reserved count from inventory");
 
         log.info("Successfully cancelled the booking for Id : {}", booking.getId());
