@@ -28,4 +28,10 @@ public class BookingDTO {
     private LocalDateTime updatedAt;
 
     private BigDecimal amount;
+
+    private Long hotelId;
+
+    private String hotelName;
+
+    private String roomType;
 }
