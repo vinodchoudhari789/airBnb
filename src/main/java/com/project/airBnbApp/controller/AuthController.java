@@ -36,6 +36,12 @@ public class AuthController {
         return new ResponseEntity<>(authService.signUp(singUpRequestDTO), HttpStatus.CREATED);
     }
 
+    @PostMapping("/signup/host")
+    public ResponseEntity<UserDTO> signUpAsHost(@RequestBody SingUpRequestDTO singUpRequestDTO){
+        log.info("Initiating host signUp for user : {}",singUpRequestDTO.getEmail());
+        return new ResponseEntity<>(authService.signUpAsHost(singUpRequestDTO), HttpStatus.CREATED);
+    }
+
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDTO> login(@RequestBody LoginDTO loginDTO, HttpServletRequest request, HttpServletResponse response){
         log.info("Initiating login for user : {}", loginDTO.getEmail());

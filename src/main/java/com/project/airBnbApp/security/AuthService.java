@@ -32,6 +32,19 @@ public class AuthService {
 
     public UserDTO signUp(SingUpRequestDTO singUpRequestDTO){
         log.info("Inside signUp service");
+        return createUser(singUpRequestDTO, Role.GUEST);
+    }
+
+    // Self-service "become a host" signup - same validation/creation path as
+    // signUp, just assigns HOTEL_MANAGER instead of GUEST. No approval step;
+    // if you later want a review/invite gate before granting this role,
+    // this is the method to add it to.
+    public UserDTO signUpAsHost(SingUpRequestDTO singUpRequestDTO){
+        log.info("Inside signUpAsHost service");
+        return createUser(singUpRequestDTO, Role.HOTEL_MANAGER);
+    }
+
+    private UserDTO createUser(SingUpRequestDTO singUpRequestDTO, Role role){
         Optional<User> user = userRepository.findByEmail(singUpRequestDTO.getEmail());
         if(user.isPresent()){
             throw new RuntimeException("User with email id : "+singUpRequestDTO.getEmail()+ "already exists!!!");
@@ -39,7 +52,7 @@ public class AuthService {
         log.info("User not present!, Creating new user");
 
         User newUser = modelMapper.map(singUpRequestDTO, User.class);
-        newUser.setRoles(Set.of(Role.GUEST));
+        newUser.setRoles(Set.of(role));
         newUser.setPassword(passwordEncoder.encode(newUser.getPassword()));
         newUser = userRepository.save(newUser);
         log.info("Saved User : {}", newUser);
@@ -69,6 +82,6 @@ public class AuthService {
         User user = userRepository.findById(id)
                 .orElseThrow(()-> new ResourceNotFoundException("User not found with id : "+id));
 
-        return jwtService.generateAccessToken(user);
+        return jwtService.generateRefreshToken(user);
     }
 }
