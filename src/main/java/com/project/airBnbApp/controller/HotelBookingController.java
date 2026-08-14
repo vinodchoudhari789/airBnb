@@ -30,6 +30,11 @@ public class HotelBookingController {
         return ResponseEntity.ok(bookingService.addGuests(bookingId, guestsDTOList));
     }
 
+    @PutMapping("/{bookingId}/guests")
+    public ResponseEntity<BookingDTO> updateGuests(@PathVariable Long bookingId, @RequestBody List<GuestDTO> guestsDTOList){
+        return ResponseEntity.ok(bookingService.updateGuests(bookingId, guestsDTOList));
+    }
+
     @PostMapping("/{bookingId}/payments")
     public ResponseEntity<Map<String, String>> initiatePayment(@PathVariable Long bookingId){
         String sessionUrl = bookingService.initiatePayment(bookingId);

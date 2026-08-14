@@ -16,6 +16,11 @@ public interface BookingService {
 
     BookingDTO addGuests(Long bookingId, List<GuestDTO> guestsDTOList);
 
+    // Replaces the guest list for a booking that already has guests added
+    // (GUESTS_ADDED or PAYMENT_PENDING) - unlike addGuests, which only works
+    // once from RESERVED and appends rather than replaces.
+    BookingDTO updateGuests(Long bookingId, List<GuestDTO> guestsDTOList);
+
     String initiatePayment(Long bookingId);
 
     void capturePayment(Event event);

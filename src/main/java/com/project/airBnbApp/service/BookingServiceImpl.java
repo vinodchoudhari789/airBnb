@@ -162,6 +162,55 @@ public class BookingServiceImpl implements BookingService{
 
     @Override
     @Transactional
+    public BookingDTO updateGuests(Long bookingId, List<GuestDTO> guestsDTOList) {
+        log.info("Updating Guests for Booking : {}", bookingId);
+
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(()-> new ResourceNotFoundException("Booking not found with ID : "+bookingId));
+
+        User user = getCurrentUser();
+
+        log.info("Checking if booking is of current user or not");
+        if(!user.equals(booking.getUser())){
+            throw new UnauthorizedException("Booking does not belong to this user with id : "+user.getId());
+        }
+
+        log.info("Checking if booking is expired or not");
+        if(hasBookingExpired(booking)){
+            throw new IllegalStateException("Booking has already expired");
+        }
+
+        // Guests can only be edited after they've been added at least once
+        // (GUESTS_ADDED) and before the booking is actually paid for/
+        // confirmed - once CONFIRMED, guest changes should go through the
+        // hotel directly rather than silently rewriting a paid booking.
+        log.info("Checking if booking guests can be edited");
+        if(booking.getBookingStatus() != BookingStatus.GUESTS_ADDED
+                && booking.getBookingStatus() != BookingStatus.PAYMENT_PENDING){
+            throw new IllegalStateException("Guests can only be edited before the booking is confirmed");
+        }
+
+        if(guestsDTOList == null || guestsDTOList.isEmpty()){
+            throw new IllegalStateException("At least one guest is required");
+        }
+
+        log.info("Replacing guests in booking");
+        booking.getGuestSet().clear();
+        for(GuestDTO guestDTO: guestsDTOList){
+            Guest guest = modelMapper.map(guestDTO, Guest.class);
+            guest.setUser(getCurrentUser());
+            guest = guestRepository.save(guest);
+            booking.getGuestSet().add(guest);
+        }
+
+        booking = bookingRepository.save(booking);
+
+        log.info("Guests Updated Successfully!!!");
+        return modelMapper.map(booking, BookingDTO.class);
+    }
+
+    @Override
+    @Transactional
     public String initiatePayment(Long bookingId) {
         log.info("Checking if booking exists or not");
         Booking booking = bookingRepository.findById(bookingId)
