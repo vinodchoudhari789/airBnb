@@ -9,6 +9,7 @@ import com.project.airBnbApp.entity.User;
 import com.project.airBnbApp.exception.ResourceNotFoundException;
 import com.project.airBnbApp.exception.UnauthorizedException;
 import com.project.airBnbApp.respository.HotelRepository;
+import com.project.airBnbApp.respository.InventoryRepository;
 import com.project.airBnbApp.respository.RoomRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,7 @@ public class HotelServiceImpl implements HotelService{
     private final ModelMapper modelMapper;
     private final InventoryService inventoryService;
     private final RoomRepository roomRepository;
+    private final InventoryRepository inventoryRepository;
 
     @Override
     @Transactional
@@ -130,15 +132,43 @@ public class HotelServiceImpl implements HotelService{
         hotelRepository.save(hotel);
         log.info("Activated the hotel with ID : {}", id);
 
-        // Assuming Only Do it Once
-        log.info("Initializing one year of inventory for all rooms in hotel: {}", hotel.getId());
+        // Idempotent by design: only initialize a room's inventory if it
+        // doesn't already have any. This makes activation safe to call any
+        // number of times (e.g. after a deactivate/reactivate cycle) without
+        // duplicating inventory rows, and also correctly backfills inventory
+        // for any room that was added while the hotel was inactive (those
+        // don't get auto-initialized at creation time).
+        log.info("Ensuring one year of inventory exists for all rooms in hotel: {}", hotel.getId());
         for(Room room: hotel.getRoomList()){
+            if (inventoryRepository.existsByRoom(room)) {
+                log.info("Room {} already has inventory, skipping", room.getId());
+                continue;
+            }
             log.info("Initializing one year of inventory for room: {}", room.getId());
             inventoryService.initializeRoomForAYear(room);
             log.info("Successfully initialized one year of inventory for room: {}", room.getId());
         }
-        log.info("Successfully initialized one year of inventory for all rooms in hotel: {}", hotel.getId());
+        log.info("Successfully ensured inventory for all rooms in hotel: {}", hotel.getId());
 
+    }
+
+    @Override
+    @Transactional
+    public void deactivateHotelById(Long id) {
+        log.info("Deactivating the hotel with ID : {}", id);
+        Hotel hotel = hotelRepository
+                .findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Hotel not found with ID : "+id));
+
+        checkHotelBelongsToUser(hotel);
+
+        // Just a visibility flag - no inventory side effects, so this is
+        // trivially safe to call any number of times. Existing inventory
+        // and bookings are left intact; the hotel simply stops appearing
+        // in guest search until reactivated.
+        hotel.setActive(false);
+        hotelRepository.save(hotel);
+        log.info("Deactivated the hotel with ID : {}", id);
     }
 
 

@@ -54,6 +54,12 @@ public class HotelController {
         return ResponseEntity.noContent().build();
     }
 
+    @PatchMapping("/{hotelId}/deactivate")
+    public ResponseEntity<Void> deactivateHotelById(@PathVariable Long hotelId){
+        hotelService.deactivateHotelById(hotelId);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping
     public ResponseEntity<List<HotelDTO>> getAllHotels(){
         List<HotelDTO> hotelList = hotelService.getAllHotels();

@@ -20,6 +20,12 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
 
     void deleteByRoom(Room room);
 
+    // Used to make hotel activation idempotent - only initialize a year of
+    // inventory for a room if it doesn't already have any (covers first
+    // activation, re-activation after a deactivation, and rooms that were
+    // added while the hotel was inactive).
+    boolean existsByRoom(Room room);
+
     @Query("""
         SELECT DISTINCT i.hotel
         FROM Inventory i
