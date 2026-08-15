@@ -72,8 +72,17 @@ public class HotelServiceImpl implements HotelService{
 
         checkHotelBelongsToUser(hotel);
 
+        // Preserve active status regardless of what's in hotelDTO - the
+        // frontend's edit form doesn't send `active` (it's not meant to be
+        // editable there), which deserializes as null and would otherwise
+        // get blanket-mapped over the existing value below, silently
+        // deactivating the hotel. Activation is exclusively the job of
+        // activateHotelById.
+        Boolean wasActive = hotel.getActive();
+
         modelMapper.map(hotelDTO, hotel);
         hotel.setId(id);
+        hotel.setActive(wasActive);
 
         // Arrays aren't affected by ModelMapper's collection-merge setting — handle manually
         if (hotelDTO.getAmenities() != null) {
