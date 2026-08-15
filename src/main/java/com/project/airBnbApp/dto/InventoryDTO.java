@@ -3,15 +3,15 @@ package com.project.airBnbApp.dto;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Date;
 
 @Data
 public class InventoryDTO {
 
     private Long id;
 
-    private Date date;
+    private LocalDate date;
 
     private Integer bookedCount;
 
