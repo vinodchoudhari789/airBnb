@@ -341,7 +341,11 @@ public class BookingServiceImpl implements BookingService{
         log.info("Fetched all bookings of hotel with Id : {}",hotelId);
 
         return bookings.stream()
-                .map((element) -> modelMapper.map(element, BookingDTO.class))
+                .map((element) -> {
+                    BookingDTO dto = modelMapper.map(element, BookingDTO.class);
+                    dto.setRoomType(element.getRoom().getType());
+                    return dto;
+                })
                 .toList();
     }
 
