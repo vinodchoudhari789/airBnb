@@ -23,6 +23,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class RoomServiceImpl implements RoomService{
 
+    private final PricingUpdateService pricingUpdateService;
+
     private final ModelMapper modelMapper;
     private final RoomRepository roomRepository;
     private final HotelRepository hotelRepository;
@@ -121,7 +123,11 @@ public class RoomServiceImpl implements RoomService{
         modelMapper.map(roomDTO, room);
         room.setId(roomId);
 
-        // TODO: if price or inventory is updated then update the inventory for this room.
+        // Immediately refresh this hotel's cached inventory prices and
+        // search min-price, rather than leaving them stale until the next
+        // hourly PricingUpdateService run. Cheap: scoped to one hotel, and
+        // a no-op if the hotel has no inventory yet (e.g. still inactive).
+        pricingUpdateService.updateHotelPrices(room.getHotel());
 
         log.info("Updated room with ID : {}",roomId);
         return modelMapper.map(room, RoomDTO.class);

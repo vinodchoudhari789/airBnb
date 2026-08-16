@@ -57,7 +57,14 @@ public class PricingUpdateService {
         }
     }
 
-    private void updateHotelPrices(Hotel hotel){
+    /**
+     * Recalculates Inventory.price for every future inventory row of this
+     * hotel, and refreshes the hotel_min_price cache used by guest search.
+     * Called by the hourly scheduler (updatePrice) for all hotels, and also
+     * called immediately after a room is edited (see RoomServiceImpl) so a
+     * manager's price correction doesn't sit stale for up to an hour.
+     */
+    public void updateHotelPrices(Hotel hotel){
         log.info("Updating hotel prices for hotel ID: {}", hotel.getId());
 
         LocalDate startDate = LocalDate.now();
