@@ -82,9 +82,31 @@ public class HotelServiceImpl implements HotelService{
         // activateHotelById.
         Boolean wasActive = hotel.getActive();
 
+        // Name, city, and every contact-info field are fixed at creation
+        // and never editable afterward - a guest books against this exact
+        // identity/location/contact info, so changing any of it later
+        // (even innocently, e.g. fixing a typo) would silently break the
+        // accuracy of existing and past bookings. Only amenities/photos
+        // remain editable post-creation. Preserved regardless of what's in
+        // hotelDTO, same pattern as `active` above.
+        String originalName = hotel.getName();
+        String originalCity = hotel.getCity();
+        String originalAddress = hotel.getContactInfo() != null ? hotel.getContactInfo().getAddress() : null;
+        String originalLocation = hotel.getContactInfo() != null ? hotel.getContactInfo().getLocation() : null;
+        String originalEmail = hotel.getContactInfo() != null ? hotel.getContactInfo().getEmail() : null;
+        String originalPhoneNumber = hotel.getContactInfo() != null ? hotel.getContactInfo().getPhoneNumber() : null;
+
         modelMapper.map(hotelDTO, hotel);
         hotel.setId(id);
         hotel.setActive(wasActive);
+        hotel.setName(originalName);
+        hotel.setCity(originalCity);
+        if (hotel.getContactInfo() != null) {
+            hotel.getContactInfo().setAddress(originalAddress);
+            hotel.getContactInfo().setLocation(originalLocation);
+            hotel.getContactInfo().setEmail(originalEmail);
+            hotel.getContactInfo().setPhoneNumber(originalPhoneNumber);
+        }
 
         // Arrays aren't affected by ModelMapper's collection-merge setting — handle manually
         if (hotelDTO.getAmenities() != null) {
