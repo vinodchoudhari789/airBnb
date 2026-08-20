@@ -55,7 +55,7 @@ public class AuthService {
         newUser.setRoles(Set.of(role));
         newUser.setPassword(passwordEncoder.encode(newUser.getPassword()));
         newUser = userRepository.save(newUser);
-        log.info("Saved User : {}", newUser);
+        log.info("Saved User with id : {}", newUser.getId());
         return modelMapper.map(newUser, UserDTO.class);
     }
 
