@@ -7,7 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import javax.naming.AuthenticationException;
+import org.springframework.security.core.AuthenticationException;
 import java.nio.file.AccessDeniedException;
 
 @RestControllerAdvice
@@ -26,7 +26,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<?>> handleAuthenticationException(AuthenticationException exception) {
         ApiError apiError = ApiError.builder()
                 .status(HttpStatus.UNAUTHORIZED)
-                .message(exception.getMessage())
+                .message("Invalid email or password")
                 .build();
         return buildErrorResponseEntity(apiError);
     }
