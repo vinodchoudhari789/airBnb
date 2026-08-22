@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 public interface HotelMinPriceRepository extends JpaRepository<HotelMinPrice, Long> {
@@ -30,4 +31,11 @@ public interface HotelMinPriceRepository extends JpaRepository<HotelMinPrice, Lo
     );
 
     Optional<HotelMinPrice> findByHotelAndDate(Hotel hotel, LocalDate date);
+
+    /**
+     * Fetches all existing HotelMinPrice rows for a hotel across a date range
+     * in a single query, so callers can build an in-memory lookup instead of
+     * querying per-date (avoids N+1 queries when refreshing a hotel's price cache).
+     */
+    List<HotelMinPrice> findByHotelAndDateBetween(Hotel hotel, LocalDate startDate, LocalDate endDate);
 }

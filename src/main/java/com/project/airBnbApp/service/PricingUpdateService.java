@@ -19,9 +19,11 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -96,16 +98,30 @@ public class PricingUpdateService {
                 .stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().orElse(BigDecimal.ZERO)));
 
-        // Prepare HotelPrice entities in bulk
+        if (dailyMinPrices.isEmpty()) {
+            return;
+        }
+
+        // Fetch every existing HotelMinPrice row for this hotel's date range in ONE query,
+        // instead of calling findByHotelAndDate() per-date (previously ~365 queries/hotel).
+        LocalDate rangeStart = Collections.min(dailyMinPrices.keySet());
+        LocalDate rangeEnd = Collections.max(dailyMinPrices.keySet());
+
+        Map<LocalDate, HotelMinPrice> existingByDate = hotelMinPriceRepository
+                .findByHotelAndDateBetween(hotel, rangeStart, rangeEnd)
+                .stream()
+                .collect(Collectors.toMap(HotelMinPrice::getDate, Function.identity()));
+
+        // Prepare HotelPrice entities in bulk, reusing existing rows where present
+        // and creating new ones only for dates that don't have a cached price yet.
         List<HotelMinPrice> hotelPriceList = new ArrayList<>();
-        dailyMinPrices.forEach((date,price) -> {
-            HotelMinPrice hotelMinPriceObj = hotelMinPriceRepository.findByHotelAndDate(hotel, date)
-                    .orElse(new HotelMinPrice(hotel, date));
+        dailyMinPrices.forEach((date, price) -> {
+            HotelMinPrice hotelMinPriceObj = existingByDate.getOrDefault(date, new HotelMinPrice(hotel, date));
             hotelMinPriceObj.setPrice(price);
             hotelPriceList.add(hotelMinPriceObj);
         });
 
-        // save all hotelPrice entities in bulk
+        // save all hotelPrice entities in bulk (single batched save instead of N calls)
         hotelMinPriceRepository.saveAll(hotelPriceList);
 
     }
