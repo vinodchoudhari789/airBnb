@@ -15,6 +15,10 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
+@Table(indexes = {
+        // PricingUpdateService and the hotel search query both filter by hotel_id + date
+        @Index(name = "idx_hotel_min_price_hotel_date", columnList = "hotel_id, date")
+})
 public class HotelMinPrice {
 
     @Id

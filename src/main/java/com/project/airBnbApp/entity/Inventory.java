@@ -13,9 +13,19 @@ import java.util.Date;
 @Entity
 @Getter
 @Setter
-@Table(uniqueConstraints = @UniqueConstraint(
-        name = "unique_hotel_room_date",
-        columnNames = {"hotel_id","room_id","date"})
+@Table(
+        uniqueConstraints = @UniqueConstraint(
+                name = "unique_hotel_room_date",
+                columnNames = {"hotel_id","room_id","date"}),
+        indexes = {
+                // Availability/locking lookups filter by room_id + date range
+                // (findAndLockAvailableInventory, initBooking, confirmBooking, etc.)
+                @Index(name = "idx_inventory_room_date", columnList = "room_id, date"),
+                // PricingUpdateService.updateHotelPrices() fetches by hotel_id + date range
+                @Index(name = "idx_inventory_hotel_date", columnList = "hotel_id, date"),
+                // Hotel search (findHotelWithAvailableInventory) filters by city + date range
+                @Index(name = "idx_inventory_city_date", columnList = "city, date")
+        }
 )
 @Builder
 @NoArgsConstructor

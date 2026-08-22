@@ -13,7 +13,10 @@ import java.util.List;
 @Entity
 @Getter
 @Setter
-@Table(name = "hotel")
+@Table(name = "hotel", indexes = {
+        // Hotel search filters active hotels by city (see HotelMinPriceRepository query)
+        @Index(name = "idx_hotel_city_active", columnList = "city, active")
+})
 public class Hotel {
 
     @Id
