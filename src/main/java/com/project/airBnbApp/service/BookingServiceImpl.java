@@ -4,6 +4,7 @@ import com.project.airBnbApp.dto.BookingDTO;
 import com.project.airBnbApp.dto.BookingRequestDTO;
 import com.project.airBnbApp.dto.GuestDTO;
 import com.project.airBnbApp.dto.HotelReportDTO;
+import com.project.airBnbApp.dto.PagedResponseDTO;
 import com.project.airBnbApp.entity.*;
 import com.project.airBnbApp.entity.enums.BookingStatus;
 import com.project.airBnbApp.exception.ResourceNotFoundException;
@@ -20,6 +21,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -29,7 +34,6 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static com.project.airBnbApp.util.AppUtils.getCurrentUser;
 
@@ -324,7 +328,7 @@ public class BookingServiceImpl implements BookingService{
     }
 
     @Override
-    public List<BookingDTO> getAllBookingsInHotelById(Long hotelId) {
+    public PagedResponseDTO<BookingDTO> getAllBookingsInHotelById(Long hotelId, int skip, int take) {
         log.info("Fetching hotel with Id : {}",hotelId);
         Hotel hotel = hotelRepository.findById(hotelId)
                 .orElseThrow(()-> new ResourceNotFoundException("Hotel not found with ID : "+hotelId));
@@ -336,17 +340,16 @@ public class BookingServiceImpl implements BookingService{
             throw new UnauthorizedException("User does not own this hotel with id : "+hotelId);
         }
 
+        Pageable pageable = toPageable(skip, take, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Booking> bookings = bookingRepository.findByHotel(hotel, pageable);
+        log.info("Fetched page of bookings ({} of {}) for hotel with Id : {}",
+                bookings.getNumberOfElements(), bookings.getTotalElements(), hotelId);
 
-        List<Booking> bookings = bookingRepository.findByHotel(hotel);
-        log.info("Fetched all bookings of hotel with Id : {}",hotelId);
-
-        return bookings.stream()
-                .map((element) -> {
-                    BookingDTO dto = modelMapper.map(element, BookingDTO.class);
-                    dto.setRoomType(element.getRoom().getType());
-                    return dto;
-                })
-                .toList();
+        return PagedResponseDTO.from(bookings, element -> {
+            BookingDTO dto = modelMapper.map(element, BookingDTO.class);
+            dto.setRoomType(element.getRoom().getType());
+            return dto;
+        });
     }
 
     @Override
@@ -366,42 +369,53 @@ public class BookingServiceImpl implements BookingService{
         LocalDateTime startDateTime = startDate.atStartOfDay();
         LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
 
-        List<Booking> bookings = bookingRepository.findByHotelAndCreatedAtBetween(hotel, startDateTime, endDateTime);
-        log.info("Fetched all confirmed bookings for hotel with Id : {}", hotelId);
+        // Aggregated in SQL (COUNT/SUM/AVG) instead of loading every booking
+        // row into memory and reducing in Java.
+        Object[] stats = bookingRepository.getHotelReportStats(hotel, startDateTime, endDateTime);
+        log.info("Computed report stats for hotel with Id : {}", hotelId);
 
-
-        Long totalConfirmedBookings = bookings.stream()
-                .filter(booking -> booking.getBookingStatus() == BookingStatus.CONFIRMED)
-                .count();
-
-        BigDecimal totalRevenueOfConfirmedBookings = bookings.stream()
-                .filter(booking -> booking.getBookingStatus() == BookingStatus.CONFIRMED)
-                .map(Booking::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        BigDecimal avgRevenueOfConfirmedBookings = totalConfirmedBookings == 0 ? BigDecimal.ZERO :
-                totalRevenueOfConfirmedBookings.divide(BigDecimal.valueOf(totalConfirmedBookings), RoundingMode.HALF_UP);
+        Long totalConfirmedBookings = (Long) stats[0];
+        BigDecimal totalRevenueOfConfirmedBookings = stats[1] != null ? (BigDecimal) stats[1] : BigDecimal.ZERO;
+        BigDecimal avgRevenueOfConfirmedBookings = stats[2] != null
+                ? ((BigDecimal) stats[2]).setScale(2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
 
         return new HotelReportDTO(totalConfirmedBookings, totalRevenueOfConfirmedBookings, avgRevenueOfConfirmedBookings);
     }
 
     @Override
-    public List<BookingDTO> getMyBookings() {
+    public PagedResponseDTO<BookingDTO> getMyBookings(int skip, int take) {
         User user = getCurrentUser();
-        log.info("Fetching all bookings of user : {}", user.getName());
+        log.info("Fetching bookings of user : {}", user.getName());
 
-        List<Booking> bookings = bookingRepository.findByUser(user);
-        log.info("Fetched all bookings of user : {}", user.getName());
+        Pageable pageable = toPageable(skip, take, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Booking> bookings = bookingRepository.findByUser(user, pageable);
+        log.info("Fetched page of bookings ({} of {}) for user : {}",
+                bookings.getNumberOfElements(), bookings.getTotalElements(), user.getName());
 
-        return bookings.stream()
-                .map((element) -> {
-                    BookingDTO dto = modelMapper.map(element, BookingDTO.class);
-                    dto.setHotelId(element.getHotel().getId());
-                    dto.setHotelName(element.getHotel().getName());
-                    dto.setRoomType(element.getRoom().getType());
-                    return dto;
-                })
-                .collect(Collectors.toList());
+        return PagedResponseDTO.from(bookings, element -> {
+            BookingDTO dto = modelMapper.map(element, BookingDTO.class);
+            dto.setHotelId(element.getHotel().getId());
+            dto.setHotelName(element.getHotel().getName());
+            dto.setRoomType(element.getRoom().getType());
+            return dto;
+        });
+    }
+
+    private static final int MAX_PAGE_SIZE = 100;
+    private static final int DEFAULT_PAGE_SIZE = 20;
+
+    /**
+     * Converts skip/take paging params into a Spring Pageable. skip is
+     * treated as an offset (assumed to be a multiple of take, matching how
+     * the frontend's DataTable/load-more paging always calls this), and
+     * take is clamped to (0, MAX_PAGE_SIZE] so a client can't request an
+     * unbounded page (e.g. take=999999) and defeat the point of pagination.
+     */
+    private Pageable toPageable(int skip, int take, Sort sort) {
+        int pageSize = take > 0 ? Math.min(take, MAX_PAGE_SIZE) : DEFAULT_PAGE_SIZE;
+        int pageNumber = skip > 0 ? skip / pageSize : 0;
+        return PageRequest.of(pageNumber, pageSize, sort);
     }
 
     private boolean hasBookingExpired(Booking booking) {

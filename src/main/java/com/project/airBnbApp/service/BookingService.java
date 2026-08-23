@@ -4,6 +4,7 @@ import com.project.airBnbApp.dto.BookingDTO;
 import com.project.airBnbApp.dto.BookingRequestDTO;
 import com.project.airBnbApp.dto.GuestDTO;
 import com.project.airBnbApp.dto.HotelReportDTO;
+import com.project.airBnbApp.dto.PagedResponseDTO;
 import com.stripe.model.Event;
 import org.jspecify.annotations.Nullable;
 
@@ -27,9 +28,9 @@ public interface BookingService {
 
     void cancelBooking(Long bookingId);
 
-    List<BookingDTO> getAllBookingsInHotelById(Long hotelId);
+    PagedResponseDTO<BookingDTO> getAllBookingsInHotelById(Long hotelId, int skip, int take);
 
     HotelReportDTO getHotelReport(Long hotelId, LocalDate startDate, LocalDate endDate);
 
-    List<BookingDTO> getMyBookings();
+    PagedResponseDTO<BookingDTO> getMyBookings(int skip, int take);
 }

@@ -1,6 +1,7 @@
 package com.project.airBnbApp.controller;
 
 import com.project.airBnbApp.dto.BookingDTO;
+import com.project.airBnbApp.dto.PagedResponseDTO;
 import com.project.airBnbApp.dto.ProfileUpdateRequestDTO;
 import com.project.airBnbApp.dto.UserDTO;
 import com.project.airBnbApp.service.BookingService;
@@ -9,8 +10,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/users")
@@ -28,8 +27,10 @@ public class UserController {
     }
 
     @GetMapping("/myBookings")
-    public ResponseEntity<List<BookingDTO>> getMyBookings(){
-        return ResponseEntity.ok(bookingService.getMyBookings());
+    public ResponseEntity<PagedResponseDTO<BookingDTO>> getMyBookings(
+            @RequestParam(defaultValue = "0") int skip,
+            @RequestParam(defaultValue = "20") int take){
+        return ResponseEntity.ok(bookingService.getMyBookings(skip, take));
     }
 
     @GetMapping("/profile")

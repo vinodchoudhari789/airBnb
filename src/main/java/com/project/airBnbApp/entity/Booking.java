@@ -22,7 +22,7 @@ import java.util.Set;
         @Index(name = "idx_booking_user", columnList = "user_id"),
         // Per-hotel booking lists (findByHotel)
         @Index(name = "idx_booking_hotel", columnList = "hotel_id"),
-        // Admin reports filtered by hotel + date range (findByHotelAndCreatedAtBetween)
+        // Admin reports filtered by hotel + date range (getHotelReportStats aggregation query)
         @Index(name = "idx_booking_hotel_created", columnList = "hotel_id, created_at")
 })
 public class Booking {

@@ -3,6 +3,7 @@ package com.project.airBnbApp.controller;
 import com.project.airBnbApp.dto.BookingDTO;
 import com.project.airBnbApp.dto.HotelDTO;
 import com.project.airBnbApp.dto.HotelReportDTO;
+import com.project.airBnbApp.dto.PagedResponseDTO;
 import com.project.airBnbApp.service.BookingService;
 import com.project.airBnbApp.service.HotelService;
 import lombok.RequiredArgsConstructor;
@@ -67,8 +68,11 @@ public class HotelController {
     }
 
     @GetMapping("/{hotelId}/bookings")
-    public ResponseEntity<List<BookingDTO>> getAllBookingsInHotelById(@PathVariable Long hotelId){
-        List<BookingDTO> bookings = bookingService.getAllBookingsInHotelById(hotelId);
+    public ResponseEntity<PagedResponseDTO<BookingDTO>> getAllBookingsInHotelById(
+            @PathVariable Long hotelId,
+            @RequestParam(defaultValue = "0") int skip,
+            @RequestParam(defaultValue = "20") int take){
+        PagedResponseDTO<BookingDTO> bookings = bookingService.getAllBookingsInHotelById(hotelId, skip, take);
         return ResponseEntity.ok(bookings);
     }
 
