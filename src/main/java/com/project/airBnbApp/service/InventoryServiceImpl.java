@@ -2,6 +2,8 @@ package com.project.airBnbApp.service;
 
 import com.project.airBnbApp.dto.HotelPriceDTO;
 import com.project.airBnbApp.dto.HotelSearchRequestDTO;
+import com.project.airBnbApp.dto.HotelSearchRowDTO;
+import com.project.airBnbApp.dto.HotelSummaryDTO;
 import com.project.airBnbApp.dto.InventoryDTO;
 import com.project.airBnbApp.dto.RoomPriceDTO;
 import com.project.airBnbApp.dto.UpdateInventoryRequestDTO;
@@ -84,8 +86,16 @@ public class InventoryServiceImpl implements InventoryService{
 
         // business logic  -- if 90 Days < then hotel min price and if 90 Days
 
-        Page<HotelPriceDTO> hotelPage = hotelMinPriceRepository.findHotelWithAvailableInventory(hotelSearchRequestDTO.getCity(),
+        Page<HotelSearchRowDTO> rows = hotelMinPriceRepository.findHotelWithAvailableInventory(hotelSearchRequestDTO.getCity(),
                 hotelSearchRequestDTO.getStartDate(), hotelSearchRequestDTO.getEndDate(), pageable);
+
+        // Remap the flat query-projection row into the public response shape
+        // (HotelSummaryDTO instead of the Hotel entity - see that DTO's
+        // javadoc). Page.map() preserves pagination metadata.
+        Page<HotelPriceDTO> hotelPage = rows.map(row -> new HotelPriceDTO(
+                new HotelSummaryDTO(row.getHotelId(), row.getHotelName(), row.getHotelCity(), row.getPhotos(), row.getAmenities()),
+                row.getPrice()
+        ));
 
         log.info("Completed search hotels for {} city, from {} to {}",
                 hotelSearchRequestDTO.getCity(), hotelSearchRequestDTO.getStartDate(), hotelSearchRequestDTO.getEndDate());
