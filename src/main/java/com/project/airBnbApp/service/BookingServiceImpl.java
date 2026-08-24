@@ -233,7 +233,7 @@ public class BookingServiceImpl implements BookingService{
             throw new IllegalStateException("Booking has already expired");
         }
 
-         String sessionUrl = checkoutService.getCheckoutSession(booking,
+        String sessionUrl = checkoutService.getCheckoutSession(booking,
                 frontendUrl+"/payments/success",
                 frontendUrl+"/payments/failure" );
 
@@ -370,14 +370,22 @@ public class BookingServiceImpl implements BookingService{
         LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
 
         // Aggregated in SQL (COUNT/SUM/AVG) instead of loading every booking
-        // row into memory and reducing in Java.
-        Object[] stats = bookingRepository.getHotelReportStats(hotel, startDateTime, endDateTime);
+        // row into memory and reducing in Java. A non-GROUP-BY aggregate
+        // query always returns exactly one row, so statsRows.get(0) is safe
+        // even when there are zero matching bookings (count=0, sum/avg=null).
+        List<Object[]> statsRows = bookingRepository.getHotelReportStats(hotel, startDateTime, endDateTime);
+        Object[] stats = statsRows.get(0);
         log.info("Computed report stats for hotel with Id : {}", hotelId);
 
         Long totalConfirmedBookings = (Long) stats[0];
         BigDecimal totalRevenueOfConfirmedBookings = stats[1] != null ? (BigDecimal) stats[1] : BigDecimal.ZERO;
+        // JPQL's AVG() always returns Double regardless of the source
+        // column's type (JPA spec, not Hibernate-specific) - unlike SUM(),
+        // which preserves BigDecimal. Casting this straight to BigDecimal
+        // throws a ClassCastException; go through BigDecimal.valueOf(double)
+        // instead.
         BigDecimal avgRevenueOfConfirmedBookings = stats[2] != null
-                ? ((BigDecimal) stats[2]).setScale(2, RoundingMode.HALF_UP)
+                ? BigDecimal.valueOf((Double) stats[2]).setScale(2, RoundingMode.HALF_UP)
                 : BigDecimal.ZERO;
 
         return new HotelReportDTO(totalConfirmedBookings, totalRevenueOfConfirmedBookings, avgRevenueOfConfirmedBookings);

@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 public interface BookingRepository extends JpaRepository<Booking, Long> {
@@ -22,9 +23,19 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     /**
      * Aggregates the hotel report stats (confirmed booking count, total
      * revenue, average revenue) in a single SQL query instead of loading
-     * every booking row into memory and reducing in Java. Returns
-     * [count, sum, avg] - sum/avg are null when there are no matching rows,
-     * so the service layer coalesces those to BigDecimal.ZERO.
+     * every booking row into memory and reducing in Java.
+     *
+     * Declared as List<Object[]> rather than Object[] directly - a
+     * non-GROUP-BY multi-column aggregate query always returns exactly one
+     * row, but Spring Data JPA's proxy doesn't reliably unwrap a single-row
+     * Object[] result when the method's own return type is Object[]
+     * (surfaces as a ClassCastException: [Ljava.lang.Object; cannot be cast
+     * to Long). Returning the row list and taking element 0 in the service
+     * layer is the standard, reliable pattern for this.
+     *
+     * The single returned row is [count, sum, avg] - sum/avg are null when
+     * there are no matching rows, so the service layer coalesces those to
+     * BigDecimal.ZERO.
      */
     @Query("""
             SELECT COUNT(b), SUM(b.amount), AVG(b.amount)
@@ -33,7 +44,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
               AND b.createdAt BETWEEN :startDateTime AND :endDateTime
               AND b.bookingStatus = com.project.airBnbApp.entity.enums.BookingStatus.CONFIRMED
             """)
-    Object[] getHotelReportStats(@Param("hotel") Hotel hotel,
-                                  @Param("startDateTime") LocalDateTime startDateTime,
-                                  @Param("endDateTime") LocalDateTime endDateTime);
+    List<Object[]> getHotelReportStats(@Param("hotel") Hotel hotel,
+                                       @Param("startDateTime") LocalDateTime startDateTime,
+                                       @Param("endDateTime") LocalDateTime endDateTime);
 }
