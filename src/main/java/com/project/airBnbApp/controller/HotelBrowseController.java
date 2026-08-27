@@ -1,6 +1,5 @@
 package com.project.airBnbApp.controller;
 
-import com.project.airBnbApp.dto.HotelDTO;
 import com.project.airBnbApp.dto.HotelInfoDTO;
 import com.project.airBnbApp.dto.HotelPriceDTO;
 import com.project.airBnbApp.dto.HotelSearchRequestDTO;
