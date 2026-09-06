@@ -1,0 +1,19 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      java: corretto25
+  build:
+    commands:
+      - echo Building, testing and packaging the application...
+      - mvn clean package -DskipTests
+  post_build:
+    commands:
+      - echo Build, testing and packaging completed on `date`
+artifacts:
+  files:
+    - target/*.jar
+cache:
+  paths:
+    - '/root/.m2/**/*'
